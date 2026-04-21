@@ -98,6 +98,17 @@ RUN echo "import sys, re" > patch_vllm.py && \
   echo "txt = re.sub(r'device_name = .*', 'device_name = \"gfx1201\"', txt)" >> patch_vllm.py && \
   echo "txt += '\n    def get_device_name(self, device_id: int = 0) -> str:\n        return \"AMD-gfx1201\"\n'" >> patch_vllm.py && \
   echo "p.write_text(txt)" >> patch_vllm.py && \
+  # Patch 3: transformers_utils/config.py - Fix GenerationConfig lazy load
+  echo "p = Path('vllm/transformers_utils/config.py')" >> patch_vllm.py && \
+  echo "txt = p.read_text()" >> patch_vllm.py && \
+  echo "txt = txt.replace('from transformers import PretrainedConfig', 'from transformers.configuration_utils import PretrainedConfig')" >> patch_vllm.py && \
+  echo "txt = txt.replace('from transformers import GenerationConfig', 'from transformers.generation import GenerationConfig')" >> patch_vllm.py && \
+  echo "p.write_text(txt)" >> patch_vllm.py && \
+  # Patch 4: rocm.py - Hardcode _GCN_ARCH to bypass MagicMock regex crash
+  echo "p = Path('vllm/platforms/rocm.py')" >> patch_vllm.py && \
+  echo "txt = p.read_text()" >> patch_vllm.py && \
+  echo "txt = re.sub(r'_GCN_ARCH\s*=\s*_get_gcn_arch\(\)', '_GCN_ARCH = \"gfx1201\"', txt)" >> patch_vllm.py && \
+  echo "p.write_text(txt)" >> patch_vllm.py && \
   echo "print('Successfully patched vLLM for R9700')" >> patch_vllm.py && \
   python patch_vllm.py
 
@@ -159,5 +170,16 @@ COPY benchmarks/max_context_results.json /opt/max_context_results.json
 COPY benchmarks/run_vllm_bench.py /opt/run_vllm_bench.py
 RUN chmod 0644 /etc/profile.d/*.sh && chmod +x /usr/local/bin/start-vllm && chmod 0644 /opt/max_context_results.json
 RUN printf 'ulimit -S -c 0\n' > /etc/profile.d/90-nocoredump.sh && chmod 0644 /etc/profile.d/90-nocoredump.sh
+
+# 9. Install Custom RCCL (gfx1201) - Replaces standard library with manually built one
+COPY custom_libs/librccl.so.1.gz /tmp/librccl.so.1.gz
+RUN echo "Installing Custom RCCL..." && \
+  gzip -d /tmp/librccl.so.1.gz && \
+  chmod 755 /tmp/librccl.so.1 && \
+  # Replace /opt/rocm library strictly
+  cp -fv /tmp/librccl.so.1 /opt/rocm/lib/librccl.so.1.0 && \
+  # Replace /opt/venv library
+  find /opt/venv -name "librccl.so*" -type f -exec cp -fv /tmp/librccl.so.1 {} + && \
+  rm /tmp/librccl.so.1
 
 CMD ["/bin/bash"]
