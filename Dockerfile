@@ -59,7 +59,9 @@ RUN python -m pip install --upgrade pip wheel packaging "setuptools<80.0.0"
 # 5. Install PyTorch (TheRock Nightly)
 RUN python -m pip install \
   --index-url https://rocm.nightlies.amd.com/v2-staging/gfx120X-all/ \
-  --pre torch torchaudio torchvision
+  --pre torch torchaudio torchvision && \
+  find /opt/venv/lib/python3.12/site-packages/torch* -type f -name "*.so" -exec strip -s {} + 2>/dev/null || true && \
+  find /opt/venv/lib/python3.12/site-packages/torch* -type d -name "__pycache__" -prune -exec rm -rf {} +
 
 # Flash-Attention
 WORKDIR /opt
@@ -132,7 +134,10 @@ RUN export HIP_DEVICE_LIB_PATH=$(find /opt/rocm -type d -name bitcode -print -qu
   echo "Compiling with Bitcode: $HIP_DEVICE_LIB_PATH" && \
   export CMAKE_ARGS="-DROCM_PATH=/opt/rocm -DHIP_PATH=/opt/rocm -DAMDGPU_TARGETS=gfx1201 -DHIP_ARCHITECTURES=gfx1201" && \   
   python -m pip wheel --no-build-isolation --no-deps -w /tmp/dist -v . && \
-  python -m pip install /tmp/dist/*.whl
+  python -m pip install /tmp/dist/*.whl && \
+  rm -rf /tmp/dist && \
+  find /opt/venv/lib/python3.12/site-packages/vllm -type f -name "*.so" -exec strip -s {} + 2>/dev/null || true && \
+  find /opt/venv/lib/python3.12/site-packages/vllm -type d -name "__pycache__" -prune -exec rm -rf {} +
 
 # --- bitsandbytes (ROCm) ---
 WORKDIR /opt
@@ -152,15 +157,11 @@ RUN cmake -S . \
   -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ \
   && \
   make -j$(nproc) && \
-  python -m pip install --no-cache-dir . --no-build-isolation --no-deps
+  python -m pip install --no-cache-dir . --no-build-isolation --no-deps && \
+  find /opt/venv/lib/python3.12/site-packages/bitsandbytes -type d -name "__pycache__" -prune -exec rm -rf {} +
 
-# 8. Final Cleanup & Runtime
+# 8. Runtime Configurations
 WORKDIR /opt
-RUN chmod -R a+rwX /opt && \
-  find /opt/venv -type f -name "*.so" -exec strip -s {} + 2>/dev/null || true && \
-  find /opt/venv -type d -name "__pycache__" -prune -exec rm -rf {} + && \
-  rm -rf /root/.cache/pip || true && \
-  dnf clean all && rm -rf /var/cache/dnf/*
 
 COPY scripts/01-rocm-envs.sh /etc/profile.d/01-rocm-envs.sh
 COPY scripts/99-toolbox-banner.sh /etc/profile.d/99-toolbox-banner.sh

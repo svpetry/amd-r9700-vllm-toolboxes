@@ -48,6 +48,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=./install \
             -DBUILD_TESTS=OFF \
             -DENABLE_AMDSMI=OFF \
+            -DGENERATE_SYM_KERNELS=ON \
             -DCMAKE_BUILD_TYPE=Release
           make -j$(nproc)
           make install
