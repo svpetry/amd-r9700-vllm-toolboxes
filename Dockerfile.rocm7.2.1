@@ -50,8 +50,8 @@ RUN printf 'source /opt/venv/bin/activate\n' > /etc/profile.d/venv.sh
 RUN python -m pip install --upgrade pip wheel packaging "setuptools<80.0.0"
 
 # 5. Install PyTorch (Stable ROCm 7.2.1)
-RUN python -m pip install --pre torch==2.9.1 torchaudio torchvision \
-  --index-url https://download.pytorch.org/whl/rocm7.2.1 && \
+RUN python -m pip install --pre torch torchaudio torchvision \
+  --index-url https://download.pytorch.org/whl/rocm7.2 && \
   find /opt/venv/lib/python3.12/site-packages/torch* -type f -name "*.so" -exec strip -s {} + 2>/dev/null || true && \
   find /opt/venv/lib/python3.12/site-packages/torch* -type d -name "__pycache__" -prune -exec rm -rf {} +
 
