@@ -12,8 +12,9 @@ An **fedora-based** Docker/Podman container that is **Toolbx-compatible** (usabl
 * [1) Toolbx vs Docker/Podman](#1-toolbx-vs-dockerpodman)
 * [2) Quickstart — Fedora Toolbx](#2-quickstart--fedora-toolbx)
 * [3) Quickstart — Ubuntu (Distrobox)](#3-quickstart--ubuntu-distrobox)
-* [4) Testing the API](#4-testing-the-api)
-* [5) Use a Web UI for Chatting](#5-use-a-web-ui-for-chatting)
+* [4) Keeping the Toolbox Up-to-Date](#4-keeping-the-toolbox-up-to-date)
+* [5) Testing the API](#5-testing-the-api)
+* [6) Use a Web UI for Chatting](#6-use-a-web-ui-for-chatting)
 
 
 ## Tested Models (Benchmarks)
@@ -133,7 +134,24 @@ start-vllm
 
 ---
 
-## 4) Testing the API
+## 4) Keeping the Toolbox Up-to-Date
+
+The `vllm-therock-gfx1201` image patches and tracks AMD ROCm nightlies. To rapidly recreate your toolbox without losing your host-mounted model weights, use the utility script:
+
+```bash
+# Pull the script to your local host
+curl -O https://raw.githubusercontent.com/kyuz0/amd-r9700-vllm-toolboxes/main/scripts/refresh-toolbox.sh
+chmod +x refresh-toolbox.sh
+
+# Run to interactively pull 'stable' or 'latest'
+./refresh-toolbox.sh
+```
+
+This detects Podman/Docker, removes the old container, recreates it with all necessary `seccomp` and GPU volume flags, and prunes orphaned image cache.
+
+---
+
+## 5) Testing the API
 
 Once the server is up, hit the OpenAI‑compatible endpoint:
 
@@ -158,7 +176,7 @@ MODEL=$(curl -s http://localhost:8000/v1/models | jq -r '.data[0].id') curl -X P
 
 ---
 
-## 5) Use a Web UI for Chatting
+## 6) Use a Web UI for Chatting
 
 If vLLM is on a remote server, expose port 8000 via SSH port forwarding:
 
