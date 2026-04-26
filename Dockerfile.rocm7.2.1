@@ -93,16 +93,20 @@ ENV FLASH_ATTENTION_TRITON_AMD_ENABLE="TRUE"
 ENV PYTORCH_ROCM_ARCH="gfx1201"
 ARG MAX_JOBS
 RUN MAX_JOBS=${MAX_JOBS:-$(nproc)} \
-    python3 -m build --wheel --no-isolation --outdir /dist
+    python3 -m pip wheel --no-build-isolation --no-deps -w /dist -v .
 
 FROM build_base AS build_vllm
 COPY --from=files_vllm /app/vllm /app/vllm
 WORKDIR /app/vllm
 RUN pip3 install -r requirements/rocm.txt
 ENV PYTORCH_ROCM_ARCH="gfx1201"
+ENV HIP_ARCHITECTURES="gfx1201"
+ENV AMDGPU_TARGETS="gfx1201"
 ARG MAX_JOBS
 RUN MAX_JOBS=${MAX_JOBS:-$(nproc)} \
-    python3 -m build --wheel --no-isolation --outdir /dist
+    export HIP_DEVICE_LIB_PATH=$(find /opt/rocm -type d -name bitcode -print -quit) && \
+    export CMAKE_ARGS="-DAMDGPU_TARGETS=gfx1201 -DHIP_ARCHITECTURES=gfx1201" && \
+    python3 -m pip wheel --no-build-isolation --no-deps -w /dist -v .
 
 FROM build_base AS build_bnb
 COPY --from=files_bnb /app/bitsandbytes /app/bitsandbytes
