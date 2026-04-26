@@ -6,6 +6,8 @@ ARG MAX_JOBS=""
 ############# rocm_base #############
 FROM ${BASE_IMAGE} AS rocm_base
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Add minimal apt packages for source fetching
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git aria2 curl jq tzdata ca-certificates && \
@@ -141,14 +143,7 @@ RUN --mount=type=bind,from=build_fa,src=/dist/,target=/dist_fa \
     pip3 install /dist_fa/*.whl /dist_vllm/*.whl /dist_bnb/*.whl && \
     pip3 cache purge
 
-# Custom RCCL Injection
-# Note: Ensure custom_libs/librccl.so.1.gz exists in the context
-COPY custom_libs/librccl.so.1.gz /tmp/librccl.so.1.gz
-RUN echo "Installing Custom RCCL..." && \
-  gzip -d /tmp/librccl.so.1.gz && \
-  chmod 755 /tmp/librccl.so.1 && \
-  cp -fv /tmp/librccl.so.1 /opt/rocm/lib/librccl.so.1.0 && \
-  rm /tmp/librccl.so.1
+# Custom RCCL injection disabled for stable ROCm 7.2.1 flow.
 
 # Deploy scripts and configurations
 COPY scripts/01-rocm-envs.sh /etc/profile.d/01-rocm-envs.sh
