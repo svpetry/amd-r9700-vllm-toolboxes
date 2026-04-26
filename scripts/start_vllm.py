@@ -5,6 +5,7 @@ import json
 import shutil
 import tempfile
 import subprocess
+import time
 from pathlib import Path
 
 # Add benchmarks dir to path to import config
